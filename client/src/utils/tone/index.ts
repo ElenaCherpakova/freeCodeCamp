@@ -1,13 +1,12 @@
 import store from 'store';
 import { FlashMessages } from '../../components/Flash/redux/flash-messages';
-import { Themes } from '../../components/settings/theme';
-
+import { LocalStorageThemes } from '../../redux/types';
 const TRY_AGAIN = 'https://campfire-mode.freecodecamp.org/try-again.mp3';
 const CHAL_COMP = 'https://campfire-mode.freecodecamp.org/chal-comp.mp3';
 
 const toneUrls = {
-  [Themes.Default]: 'https://campfire-mode.freecodecamp.org/day.mp3',
-  [Themes.Night]: 'https://campfire-mode.freecodecamp.org/night.mp3',
+  [LocalStorageThemes.Light]: 'https://campfire-mode.freecodecamp.org/day.mp3',
+  [LocalStorageThemes.Dark]: 'https://campfire-mode.freecodecamp.org/night.mp3',
   donation: 'https://campfire-mode.freecodecamp.org/donate.mp3',
   'tests-completed': CHAL_COMP,
   'block-toggle': 'https://tonejs.github.io/audio/berklee/guitar_chord1.mp3',
@@ -33,11 +32,28 @@ const toneUrls = {
   [FlashMessages.IncompleteSteps]: TRY_AGAIN,
   [FlashMessages.LocalCodeSaved]: CHAL_COMP,
   [FlashMessages.LocalCodeSaveError]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr1]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr2]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr3]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr4]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr5]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptErr6]: TRY_AGAIN,
+  [FlashMessages.MsTranscriptLinked]: CHAL_COMP,
+  [FlashMessages.MsTranscriptUnlinked]: CHAL_COMP,
+  [FlashMessages.MsTranscriptUnlinkErr]: TRY_AGAIN,
+  [FlashMessages.MsProfileErr]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr1]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr2]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr3]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr4]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr5]: TRY_AGAIN,
+  [FlashMessages.MsTrophyErr6]: TRY_AGAIN,
+  [FlashMessages.MsTrophyVerified]: CHAL_COMP,
   [FlashMessages.NameNeeded]: TRY_AGAIN,
   // [FlashMessages.None]: '',
   [FlashMessages.NotEligible]: TRY_AGAIN,
   [FlashMessages.NotHonest]: TRY_AGAIN,
-  [FlashMessages.NotRight]: TRY_AGAIN,
+  [FlashMessages.GenericError]: TRY_AGAIN,
   [FlashMessages.ProfilePrivate]: TRY_AGAIN,
   [FlashMessages.ProgressReset]: TRY_AGAIN,
   [FlashMessages.ProvideUsername]: TRY_AGAIN,
@@ -45,6 +61,10 @@ const toneUrls = {
   [FlashMessages.ReportSent]: CHAL_COMP,
   [FlashMessages.SigninSuccess]: CHAL_COMP,
   [FlashMessages.StartProjectErr]: TRY_AGAIN,
+  [FlashMessages.SurveyErr1]: TRY_AGAIN,
+  [FlashMessages.SurveyErr2]: TRY_AGAIN,
+  [FlashMessages.SurveyErr3]: TRY_AGAIN,
+  [FlashMessages.SurveySuccess]: CHAL_COMP,
   [FlashMessages.TimelinePrivate]: TRY_AGAIN,
   [FlashMessages.TokenDeleted]: CHAL_COMP,
   [FlashMessages.UpdatedAboutMe]: CHAL_COMP,
@@ -62,13 +82,7 @@ const toneUrls = {
   [FlashMessages.UserNotCertified]: TRY_AGAIN,
   [FlashMessages.WrongName]: TRY_AGAIN,
   [FlashMessages.WrongUpdating]: TRY_AGAIN,
-  [FlashMessages.WentWrong]: TRY_AGAIN,
-  [FlashMessages.MsTrophyErr]: TRY_AGAIN,
-  [FlashMessages.MsTrophyVerified]: CHAL_COMP,
-  [FlashMessages.MsLinked]: CHAL_COMP,
-  [FlashMessages.MsLinkErr]: TRY_AGAIN,
-  [FlashMessages.MsUnlinked]: CHAL_COMP,
-  [FlashMessages.MsUnlinkErr]: TRY_AGAIN
+  [FlashMessages.WentWrong]: TRY_AGAIN
 } as const;
 
 type ToneStates = keyof typeof toneUrls;

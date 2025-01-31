@@ -1,69 +1,73 @@
-import { test, expect, type Page } from '@playwright/test';
-import translations from '../client/i18n/locales/english/translations.json';
+import { test, expect } from '@playwright/test';
+import words from '../client/i18n/locales/english/motivation.json';
 
-let page: Page;
+test.describe('Learn - Unauthenticated user', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-const superBlocks = [
-  'Responsive Web Design',
-  'JavaScript Algorithms and Data Structures',
-  'Front End Development Libraries',
-  'Data Visualization',
-  'Relational Database',
-  'Back End Development and APIs',
-  'Quality Assurance',
-  'Scientific Computing with Python',
-  'Data Analysis with Python',
-  'Information Security',
-  'Machine Learning with Python',
-  'College Algebra with Python',
-  'Foundational C# with Microsoft',
-  'Coding Interview Prep',
-  'Project Euler'
-];
+  test('the page should render correctly', async ({ page }) => {
+    await page.goto('/learn');
 
-test.beforeAll(async ({ browser }) => {
-  page = await browser.newPage();
-  await page.goto('/learn');
+    await expect(page).toHaveTitle(
+      'Learn to Code — For Free — Coding Courses for Busy People'
+    );
+
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: "Welcome to freeCodeCamp's curriculum."
+      })
+    ).toBeVisible();
+
+    // Advice for new learners
+    const learnReadThisSection = page.getByTestId('learn-read-this-section');
+    await expect(learnReadThisSection).toBeVisible();
+
+    const learnReadThisSectionHeading = page.getByTestId(
+      'learn-read-this-heading'
+    );
+    await expect(learnReadThisSectionHeading).toBeVisible();
+
+    const learnReadThisSectionParagraphs =
+      page.getByTestId('learn-read-this-p');
+    await expect(learnReadThisSectionParagraphs).toHaveCount(10);
+
+    for (const paragraph of await learnReadThisSectionParagraphs.all()) {
+      await expect(paragraph).toBeVisible();
+    }
+
+    await expect(
+      page.getByRole('link', { name: 'Sign in to save your progress' })
+    ).toBeVisible();
+  });
 });
 
-test.afterAll(async () => {
-  await page.close();
-});
+test.describe('Learn - Authenticated user)', () => {
+  test('the page should render correctly', async ({ page }) => {
+    await page.goto('/learn');
 
-test('the page should render with correct title', async () => {
-  await expect(page).toHaveTitle(
-    'Learn to Code — For Free — Coding Courses for Busy People'
-  );
-});
+    await expect(page).toHaveTitle(
+      'Learn to Code — For Free — Coding Courses for Busy People'
+    );
 
-test('the page should have the correct header', async () => {
-  const header = page.getByTestId('learn-heading');
-  await expect(header).toBeVisible();
-  await expect(header).toContainText(translations.learn.heading);
-});
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Welcome back, Full Stack User.'
+      })
+    ).toBeVisible();
 
-test('the page should have all static data correctly placed', async () => {
-  const learnReadThisSection = page.getByTestId('learn-read-this-section');
-  await expect(learnReadThisSection).toBeVisible();
+    const shownQuote = await page.getByTestId('random-quote').textContent();
 
-  const learnReadThisSectionHeading = page.getByTestId(
-    'learn-read-this-heading'
-  );
-  await expect(learnReadThisSectionHeading).toBeVisible();
+    const shownAuthorText = await page
+      .getByTestId('random-author')
+      .textContent();
 
-  const learnReadThisSectionParagraphs = page.getByTestId('learn-read-this-p');
-  await expect(learnReadThisSectionParagraphs).toHaveCount(10);
+    const shownAuthor = shownAuthorText?.replace('- ', '');
 
-  for (const paragraph of await learnReadThisSectionParagraphs.all()) {
-    await expect(paragraph).toBeVisible();
-  }
-});
+    const allMotivationalQuotes = words.motivationalQuotes.map(mq => mq.quote);
+    const allAuthors = words.motivationalQuotes.map(mq => mq.author);
 
-test('the page renders all curriculum certifications', async () => {
-  const curriculumBtns = page.getByTestId('curriculum-map-button');
-  await expect(curriculumBtns).toHaveCount(15);
-  for (let i = 0; i < superBlocks.length; i++) {
-    const btn = curriculumBtns.nth(i);
-    await expect(btn).toContainText(superBlocks[i]);
-  }
+    expect(allMotivationalQuotes).toContain(shownQuote);
+    expect(allAuthors).toContain(shownAuthor);
+  });
 });

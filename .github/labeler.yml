@@ -12,10 +12,10 @@
   - api/**/*
 
 'scope: tools/scripts':
-  - cypress/**/*
   - tools/**/*
   - .github/**/*
   - utils/**/*
+  - e2e/**/*
 
 'scope: i18n':
   - any: ['curriculum/challenges/**/*', '!curriculum/challenges/english/**/*']

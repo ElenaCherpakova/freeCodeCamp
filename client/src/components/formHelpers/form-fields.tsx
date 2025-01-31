@@ -1,27 +1,28 @@
 import {
-  Alert,
-  ControlLabel,
   FormControl,
   FormGroup,
+  ControlLabel,
+  Alert,
   HelpBlock
-} from '@freecodecamp/react-bootstrap';
+} from '@freecodecamp/ui';
 import normalizeUrl from 'normalize-url';
 import React from 'react';
 import { Field } from 'react-final-form';
-import { useTranslation } from 'react-i18next';
 import {
   editorValidator,
   localhostValidator,
   composeValidators,
   fCCValidator,
   httpValidator,
-  pathValidator
+  pathValidator,
+  sourceCodeLinkExistsValidator
 } from './form-validators';
 
 export type FormOptions = {
   ignored?: string[];
   isEditorLinkAllowed?: boolean;
   isLocalLinkAllowed?: boolean;
+  isSourceCodeLinkRequired?: boolean;
   required?: string[];
   types?: { [key: string]: string };
   placeholders?: { [key: string]: string };
@@ -33,14 +34,14 @@ type FormFieldsProps = {
 };
 
 function FormFields({ formFields, options }: FormFieldsProps): JSX.Element {
-  const { t } = useTranslation();
   const {
     ignored = [],
     placeholders = {},
     required = [],
     types = {},
     isEditorLinkAllowed = false,
-    isLocalLinkAllowed = false
+    isLocalLinkAllowed = false,
+    isSourceCodeLinkRequired = false
   } = options;
 
   const nullOrWarning = (
@@ -66,6 +67,9 @@ function FormFields({ formFields, options }: FormFieldsProps): JSX.Element {
         validators.push(pathValidator);
       }
     }
+    if (isSourceCodeLinkRequired && name === 'githubLink') {
+      validators.push(sourceCodeLinkExistsValidator);
+    }
     if (!isLocalLinkAllowed) {
       validators.push(localhostValidator);
     }
@@ -75,10 +79,7 @@ function FormFields({ formFields, options }: FormFieldsProps): JSX.Element {
       validationWarning) as string;
     return message ? (
       <HelpBlock>
-        <Alert
-          bsStyle={error || validationError ? 'danger' : 'info'}
-          closeLabel={t('buttons.close')}
-        >
+        <Alert variant={error || validationError ? 'danger' : 'info'}>
           {message}
         </Alert>
       </HelpBlock>
@@ -97,7 +98,12 @@ function FormFields({ formFields, options }: FormFieldsProps): JSX.Element {
               const isURL = types[name] === 'url';
               return (
                 <FormGroup key={name}>
-                  <ControlLabel htmlFor={name}>{label}</ControlLabel>
+                  <ControlLabel
+                    htmlFor={name}
+                    data-playwright-test-label={`${name}-control-label`}
+                  >
+                    {label}
+                  </ControlLabel>
                   <FormControl
                     id={name}
                     name={name}
@@ -107,6 +113,7 @@ function FormFields({ formFields, options }: FormFieldsProps): JSX.Element {
                     rows={4}
                     type='url'
                     value={value as string}
+                    data-playwright-test-label={`${name}-form-control`}
                   />
                   {nullOrWarning(
                     value as string,

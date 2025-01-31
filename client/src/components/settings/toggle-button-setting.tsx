@@ -1,7 +1,6 @@
 import React from 'react';
 import ToggleCheck from '../../assets/icons/toggle-check';
 import type { ToggleSettingProps } from './toggle-radio-setting';
-import '../helpers/toggle-button.css';
 import './toggle-setting.css';
 
 export default function ToggleButtonSetting({
@@ -11,7 +10,9 @@ export default function ToggleButtonSetting({
   flagName,
   toggleFlag,
   offLabel,
-  onLabel
+  onLabel,
+  dataPlaywrightTestOffLabel,
+  dataPlaywrightTestOnLabel
 }: ToggleSettingProps): JSX.Element {
   return (
     <fieldset
@@ -29,10 +30,10 @@ export default function ToggleButtonSetting({
       </div>
       <div className='toggle-button-group'>
         <button
+          data-playwright-test-label={dataPlaywrightTestOnLabel}
           aria-pressed={flag}
           {...(!flag && { onClick: toggleFlag })}
           value='1'
-          className='toggle-button-right'
         >
           <span>
             {onLabel}
@@ -40,10 +41,10 @@ export default function ToggleButtonSetting({
           </span>
         </button>
         <button
+          data-playwright-test-label={dataPlaywrightTestOffLabel}
           aria-pressed={!flag}
           {...(flag && { onClick: toggleFlag })}
           value='2'
-          className='toggle-button-left'
         >
           <span>
             {offLabel}

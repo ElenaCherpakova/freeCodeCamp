@@ -14,7 +14,7 @@ const responsiveWeb22Base = '/learn/2022/responsive-web-design';
 const jsAlgoBase =
   '/learn/javascript-algorithms-and-data-structures/' +
   'javascript-algorithms-and-data-structures-projects';
-const jsAlgo22Base = '/learn/2022/javascript-algorithms-and-data-structures';
+const jsAlgo22Base = '/learn/javascript-algorithms-and-data-structures-v8';
 const feLibsBase =
   '/learn/front-end-development-libraries/front-end-development-libraries-projects';
 const dataVisBase = '/learn/data-visualization/data-visualization-projects';
@@ -23,9 +23,7 @@ const apiMicroBase =
   '/learn/back-end-development-and-apis/back-end-development-and-apis-projects';
 const qaBase = '/learn/quality-assurance/quality-assurance-projects';
 const infoSecBase = '/learn/information-security/information-security-projects';
-const sciCompPyBase =
-  '/learn/scientific-computing-with-python/' +
-  'scientific-computing-with-python-projects';
+const sciCompPyBase = '/learn/scientific-computing-with-python';
 const dataAnalysisPyBase =
   '/learn/data-analysis-with-python/data-analysis-with-python-projects';
 const machineLearningPyBase =
@@ -34,8 +32,9 @@ const collegeAlgebraPyBase = '/learn/college-algebra-with-python';
 const takeHomeBase = '/learn/coding-interview-prep/take-home-projects';
 const foundationalCSharpBase =
   '/learn/foundational-c-sharp-with-microsoft/foundational-c-sharp-with-microsoft-certification-exam';
-const upcomingPythonBase = '/learn/upcoming-python';
-const exampleCertBase = '/learn/example-certification';
+const fullStackDeveloperBase = '/learn/full-stack-developer';
+const a2EnglishBase = '/learn/a2-english-for-developers';
+const b1EnglishBase = '/learn/b1-english-for-developers';
 const legacyFrontEndBase = feLibsBase;
 const legacyFrontEndResponsiveBase = responsiveWebBase;
 const legacyFrontEndTakeHomeBase = takeHomeBase;
@@ -98,39 +97,39 @@ const allStandardCerts = [
     ]
   },
   {
-    id: '561abd10cb81ac38a17513bc',
+    id: '658180220947283cdc0689ce',
     title: 'JavaScript Algorithms and Data Structures',
-    certSlug: Certification.JsAlgoDataStruct,
+    certSlug: Certification.JsAlgoDataStructNew,
     projects: [
       {
-        id: 'aaa48de84e1ecc7c742e1124',
-        title: 'Palindrome Checker',
-        link: getJavaScriptAlgoPath('palindrome-checker'),
-        certSlug: Certification.JsAlgoDataStruct
+        id: '657bdc55a322aae1eac3838f',
+        title: 'Build a Palindrome Checker',
+        link: getJavaScriptAlgoPath('build-a-palindrome-checker'),
+        certSlug: Certification.JsAlgoDataStructNew
       },
       {
-        id: 'a7f4d8f2483413a6ce226cac',
-        title: 'Roman Numeral Converter',
-        link: getJavaScriptAlgoPath('roman-numeral-converter'),
-        certSlug: Certification.JsAlgoDataStruct
+        id: '657bdc8ba322aae1eac38390',
+        title: 'Build a Roman Numeral Converter',
+        link: getJavaScriptAlgoPath('build-a-roman-numeral-converter'),
+        certSlug: Certification.JsAlgoDataStructNew
       },
       {
-        id: '56533eb9ac21ba0edf2244e2',
-        title: 'Caesars Cipher',
-        link: getJavaScriptAlgoPath('caesars-cipher'),
-        certSlug: Certification.JsAlgoDataStruct
+        id: '657bdcb9a322aae1eac38391',
+        title: 'Build a Telephone Number Validator',
+        link: getJavaScriptAlgoPath('build-a-telephone-number-validator'),
+        certSlug: Certification.JsAlgoDataStructNew
       },
       {
-        id: 'aff0395860f5d3034dc0bfc9',
-        title: 'Telephone Number Validator',
-        link: getJavaScriptAlgoPath('telephone-number-validator'),
-        certSlug: Certification.JsAlgoDataStruct
+        id: '657bdcc3a322aae1eac38392',
+        title: 'Build a Cash Register',
+        link: getJavaScriptAlgoPath('build-a-cash-register'),
+        certSlug: Certification.JsAlgoDataStructNew
       },
       {
-        id: 'aa2e6f85cab2ab736c9a9b24',
-        title: 'Cash Register',
-        link: getJavaScriptAlgoPath('cash-register'),
-        certSlug: Certification.JsAlgoDataStruct
+        id: '6555c1d3e11a1574434cf8b5',
+        title: 'Build a Pokémon Search App',
+        link: getJavaScriptAlgoPath('build-a-pokemon-search-app'),
+        certSlug: Certification.JsAlgoDataStructNew
       }
     ]
   },
@@ -327,31 +326,31 @@ const allStandardCerts = [
       {
         id: '5e44412c903586ffb414c94c',
         title: 'Arithmetic Formatter',
-        link: `${sciCompPyBase}/arithmetic-formatter`,
+        link: `${sciCompPyBase}/build-an-arithmetic-formatter-project/build-an-arithmetic-formatter-project`,
         certSlug: Certification.SciCompPy
       },
       {
         id: '5e444136903586ffb414c94d',
         title: 'Time Calculator',
-        link: `${sciCompPyBase}/time-calculator`,
+        link: `${sciCompPyBase}/build-a-time-calculator-project/build-a-time-calculator-project`,
         certSlug: Certification.SciCompPy
       },
       {
         id: '5e44413e903586ffb414c94e',
         title: 'Budget App',
-        link: `${sciCompPyBase}/budget-app`,
+        link: `${sciCompPyBase}/build-a-budget-app-project/build-a-budget-app-project`,
         certSlug: Certification.SciCompPy
       },
       {
         id: '5e444147903586ffb414c94f',
         title: 'Polygon Area Calculator',
-        link: `${sciCompPyBase}/polygon-area-calculator`,
+        link: `${sciCompPyBase}/build-a-polygon-area-calculator-project/build-a-polygon-area-calculator-project`,
         certSlug: Certification.SciCompPy
       },
       {
         id: '5e44414f903586ffb414c950',
         title: 'Probability Calculator',
-        link: `${sciCompPyBase}/probability-calculator`,
+        link: `${sciCompPyBase}/build-a-probability-calculator-project/build-a-probability-calculator-project`,
         certSlug: Certification.SciCompPy
       }
     ]
@@ -574,6 +573,43 @@ const allStandardCerts = [
     ]
   },
   {
+    id: '561abd10cb81ac38a17513bc',
+    title: 'Legacy JavaScript Algorithms and Data Structures',
+    certSlug: Certification.JsAlgoDataStruct,
+    projects: [
+      {
+        id: 'aaa48de84e1ecc7c742e1124',
+        title: 'Palindrome Checker',
+        link: `${jsAlgoBase}/palindrome-checker`,
+        certSlug: Certification.JsAlgoDataStruct
+      },
+      {
+        id: 'a7f4d8f2483413a6ce226cac',
+        title: 'Roman Numeral Converter',
+        link: `${jsAlgoBase}/roman-numeral-converter`,
+        certSlug: Certification.JsAlgoDataStruct
+      },
+      {
+        id: '56533eb9ac21ba0edf2244e2',
+        title: 'Caesars Cipher',
+        link: `${jsAlgoBase}/caesars-cipher`,
+        certSlug: Certification.JsAlgoDataStruct
+      },
+      {
+        id: 'aff0395860f5d3034dc0bfc9',
+        title: 'Telephone Number Validator',
+        link: `${jsAlgoBase}/telephone-number-validator`,
+        certSlug: Certification.JsAlgoDataStruct
+      },
+      {
+        id: 'aa2e6f85cab2ab736c9a9b24',
+        title: 'Cash Register',
+        link: `${jsAlgoBase}/cash-register`,
+        certSlug: Certification.JsAlgoDataStruct
+      }
+    ]
+  },
+  {
     id: '660add10cb82ac38a17513be',
     title: 'Legacy Back End',
     certSlug: Certification.LegacyBackEnd,
@@ -763,27 +799,40 @@ const allStandardCerts = [
   // Upcoming Certifications
   {
     id: '64514fda6c245de4d11eb7bb',
-    title: 'Example Certification',
-    certSlug: 'example-certification-v8',
+    title: 'Certified Full Stack Developer',
+    certSlug: Certification.FullStackDeveloper,
     projects: [
       {
         id: '645147516c245de4d11eb7ba',
-        title: 'Certification Exam',
-        link: `${exampleCertBase}/example-certification-exam`,
-        certSlug: 'example-certification-v8'
+        title: 'Certified Full Stack Developer Exam',
+        link: `${fullStackDeveloperBase}/exam-certified-full-stack-developer/exam-certified-full-stack-developer`,
+        certSlug: Certification.FullStackDeveloper
       }
     ]
   },
   {
-    id: '64afc4e8f3b37856e035b85f',
-    title: 'Upcoming Python Certification',
-    certSlug: Certification.UpcomingPython,
+    id: '651dd7e01d697d0aab7833b7',
+    title: 'A2 English for Developers',
+    certSlug: Certification.A2English,
     projects: [
       {
-        id: '64afc37bf3b37856e035b85e',
-        title: 'Upcoming Python Project',
-        link: `${upcomingPythonBase}/upcoming-python-project`,
-        certSlug: Certification.UpcomingPython
+        id: '651dd3e06ffb500e3f2ce478',
+        title: 'A2 English for Developers Certification Exam',
+        link: `${a2EnglishBase}/a2-english-for-developers-certification-exam/a2-english-for-developers-certification-exam`,
+        certSlug: Certification.A2English
+      }
+    ]
+  },
+  {
+    id: '66607e53317411dd5e8aae21',
+    title: 'B1 English for Developers',
+    certSlug: Certification.B1English,
+    projects: [
+      {
+        id: '66607e5b317411dd5e8aae22',
+        title: "Dialogue 1: I'm Tom",
+        link: `${b1EnglishBase}/learn-how-to-describe-places-and-events/dialogue-1-im-tom`,
+        certSlug: Certification.B1English
       }
     ]
   }
@@ -798,9 +847,7 @@ function getCollegeAlgebraPyPath(project: string) {
 }
 
 function getJavaScriptAlgoPath(project: string) {
-  return showUpcomingChanges
-    ? `${jsAlgo22Base}/${project}-project/${project}`
-    : `${jsAlgoBase}/${project}`;
+  return `${jsAlgo22Base}/${project}-project/${project}`;
 }
 
 type FilteredCert<T, U> = T extends { certSlug: U } ? T : never;
@@ -834,29 +881,19 @@ const liveCerts = showUpcomingChanges
   : [...currentCerts, ...legacyCerts, fullstackCert];
 
 type CertsToProjects = Record<
-  (typeof allStandardCerts)[number]['title'],
+  (typeof allStandardCerts)[number]['certSlug'],
   (typeof allStandardCerts)[number]['projects']
 >;
 
 const certsToProjects = allStandardCerts.reduce((acc, curr) => {
   return {
     ...acc,
-    [curr.title]: curr.projects
+    [curr.certSlug]: curr.projects
   };
 }, {} as CertsToProjects);
-
-const currentCertTitles = currentCerts.map(({ title }) => title);
-const legacyCertTitles = legacyCerts.map(({ title }) => title);
-const upcomingCertTitles = upcomingCerts.map(({ title }) => title);
 
 export type CertTitle =
   | (typeof liveCerts)[number]['title']
   | 'Legacy Full Stack';
 
-export {
-  currentCertTitles,
-  legacyCertTitles,
-  upcomingCertTitles,
-  liveCerts,
-  certsToProjects
-};
+export { liveCerts, certsToProjects };

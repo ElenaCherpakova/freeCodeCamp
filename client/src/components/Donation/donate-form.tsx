@@ -6,7 +6,7 @@ import { connect } from 'react-redux';
 import Spinner from 'react-spinkit';
 import { createSelector } from 'reselect';
 import type { TFunction } from 'i18next';
-import { Button } from '@freecodecamp/react-bootstrap';
+import { Spacer } from '@freecodecamp/ui';
 
 import {
   defaultDonation,
@@ -21,17 +21,12 @@ import {
   isDonatingSelector,
   signInLoadingSelector,
   donationFormStateSelector,
-  completedChallengesSelector
+  completedChallengesSelector,
+  themeSelector
 } from '../../redux/selectors';
-import Spacer from '../helpers/spacer';
-import { Themes } from '../settings/theme';
-import { DonateFormState } from '../../redux/types';
+import { LocalStorageThemes, DonateFormState } from '../../redux/types';
 import type { CompletedChallenge } from '../../redux/prop-types';
-import {
-  CENTS_IN_DOLLAR,
-  convertToTimeContributed,
-  formattedAmountLabel
-} from './utils';
+import { CENTS_IN_DOLLAR, formattedAmountLabel } from './utils';
 import DonateCompletion from './donate-completion';
 import PatreonButton from './patreon-button';
 import PaypalButton from './paypal-button';
@@ -61,11 +56,12 @@ type PostCharge = (data: {
   name?: string | undefined;
   paymentMethodId?: string;
   handleAuthentication?: HandleAuthentication;
+  subscriptionId?: string;
 }) => void;
 
 type DonateFormProps = {
   postCharge: PostCharge;
-  defaultTheme?: Themes;
+  defaultTheme?: LocalStorageThemes;
   email: string;
   handleProcessing?: () => void;
   editAmount?: () => void;
@@ -76,10 +72,10 @@ type DonateFormProps = {
   isDonating: boolean;
   showLoading: boolean;
   t: TFunction;
-  theme: Themes;
   updateDonationFormState: (state: DonationApprovalData) => unknown;
   paymentContext: PaymentContext;
   completedChallenges: CompletedChallenge[];
+  theme: LocalStorageThemes;
 };
 
 const mapStateToProps = createSelector(
@@ -89,21 +85,23 @@ const mapStateToProps = createSelector(
   donationFormStateSelector,
   userSelector,
   completedChallengesSelector,
+  themeSelector,
   (
     showLoading: DonateFormProps['showLoading'],
     isSignedIn: DonateFormProps['isSignedIn'],
     isDonating: DonateFormProps['isDonating'],
     donationFormState: DonateFormState,
-    { email, theme }: { email: string; theme: Themes },
-    completedChallenges: CompletedChallenge[]
+    { email }: { email: string },
+    completedChallenges: CompletedChallenge[],
+    theme: LocalStorageThemes
   ) => ({
     isSignedIn,
     isDonating,
     showLoading,
     donationFormState,
     email,
-    theme,
-    completedChallenges
+    completedChallenges,
+    theme
   })
 );
 
@@ -167,9 +165,9 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
     data,
     payerEmail,
     payerName,
-    token,
     paymentMethodId,
-    handleAuthentication
+    handleAuthentication,
+    subscriptionId
   }: PostPayment): void => {
     const { donationAmount, donationDuration: duration } = this.state;
     const { paymentContext, email, selectedDonationAmount } = this.props;
@@ -181,11 +179,11 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
       amount,
       duration,
       data,
-      token,
       email: email || payerEmail,
       name: payerName,
       paymentMethodId,
-      handleAuthentication
+      handleAuthentication,
+      subscriptionId
     });
     if (this.props.handleProcessing) this.props.handleProcessing();
   };
@@ -220,18 +218,21 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
     const showMinimalPayments =
       isSignedIn && (isMinimalForm || !isDonating) && threeChallengesCompleted;
 
-    const confirmationMessage = t('donate.confirm-monthly', {
-      usd: formattedAmountLabel(donationAmount)
-    });
     const confirmationWithEditAmount = (
       <>
-        {t('donate.confirm-multitier', {
-          usd: formattedAmountLabel(donationAmount)
-        })}
+        <b>
+          {t('donate.confirm-multitier', {
+            usd: formattedAmountLabel(donationAmount)
+          })}
+        </b>
 
-        <Button bsStyle='primary' className='btn-link' onClick={editAmount}>
+        <button
+          type='button'
+          className='edit-amount-button'
+          onClick={editAmount}
+        >
           {t('donate.edit-amount')}
-        </Button>
+        </button>
       </>
     );
 
@@ -242,11 +243,12 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
     };
     return (
       <>
-        <b className={confirmationClass()}>
-          {editAmount ? confirmationWithEditAmount : confirmationMessage}
-        </b>
-        <Spacer size={editAmount ? 'small' : 'medium'} />
-        <fieldset className={'donate-btn-group security-legend'}>
+        <div className={confirmationClass()}>{confirmationWithEditAmount}</div>
+        <Spacer size={editAmount ? 'xs' : 'm'} />
+        <fieldset
+          data-playwright-test-label='donation-form'
+          className={'donate-btn-group security-legend'}
+        >
           <legend>
             <SecurityLockIcon />
             {t('donate.secure-donation')}
@@ -255,11 +257,11 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
           {loading.stripe && loading.paypal && <PaymentButtonsLoader />}
           <WalletsWrapper
             amount={donationAmount}
+            duration={donationDuration}
             handlePaymentButtonLoad={this.handlePaymentButtonLoad}
             label={walletlabel}
             onDonationStateChange={this.onDonationStateChange}
             postPayment={this.postPayment}
-            refreshErrorMessage={t('donate.refresh-needed')}
             theme={priorityTheme}
           />
           <PaypalButton
@@ -296,15 +298,8 @@ class DonateForm extends Component<DonateFormProps, DonateFormComponentState> {
   }
 
   renderPageForm() {
-    const { donationAmount } = this.state;
-    const { t } = this.props;
-    const usd = formattedAmountLabel(donationAmount);
-    const hours = convertToTimeContributed(donationAmount);
-    const donationDescription = t('donate.your-donation-2', { usd, hours });
-
     return (
       <>
-        <p className='donation-description'>{donationDescription}</p>
         <div>{this.renderButtonGroup()}</div>
       </>
     );

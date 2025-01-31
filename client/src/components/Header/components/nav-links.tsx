@@ -1,84 +1,74 @@
 import {
   faCheckSquare,
   faSquare,
-  faExternalLinkAlt,
-  faHeart
+  faExternalLinkAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import React, { Fragment } from 'react';
+import React from 'react';
 import { useTranslation, withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
+import { createSelector } from 'reselect';
 import { radioLocation } from '../../../../config/env.json';
-import { openSignoutModal } from '../../../redux/actions';
-import { updateMyTheme } from '../../../redux/settings/actions';
+import { openSignoutModal, toggleTheme } from '../../../redux/actions';
 import { Link } from '../../helpers';
-import { type ThemeProps, Themes } from '../../settings/theme';
-import { User } from '../../../redux/prop-types';
+import { LocalStorageThemes } from '../../../redux/types';
+import { themeSelector } from '../../../redux/selectors';
+import SupporterBadge from '../../../assets/icons/supporter-badge';
 
-export interface NavLinksProps extends Pick<ThemeProps, 'toggleNightMode'> {
+export interface NavLinksProps {
   displayMenu: boolean;
   showMenu: () => void;
   hideMenu: () => void;
-  user?: User;
+  user?: { isDonating: boolean; username: string };
   menuButtonRef: React.RefObject<HTMLButtonElement>;
   openSignoutModal: () => void;
+  theme: LocalStorageThemes;
+  toggleTheme: () => void;
 }
 
 const mapDispatchToProps = {
-  toggleNightMode: (theme: Themes) => updateMyTheme({ theme }),
+  toggleTheme,
   openSignoutModal
 };
+
+const mapStateToProps = createSelector(
+  themeSelector,
+  (theme: LocalStorageThemes) => ({ theme })
+);
 
 interface DonateButtonProps {
   isUserDonating: boolean | undefined;
   handleMenuKeyDown: (event: React.KeyboardEvent<HTMLAnchorElement>) => void;
 }
 
-type DonateItemProps = Pick<DonateButtonProps, 'handleMenuKeyDown'> & {
-  donateText: string;
-};
-
-const DonateItem = ({ handleMenuKeyDown, donateText }: DonateItemProps) => (
-  <li key='donate'>
-    <Link
-      className='nav-link'
-      onKeyDown={handleMenuKeyDown}
-      sameTab={false}
-      to='/donate'
-      data-test-label='dropdown-donate-button'
-    >
-      {donateText}
-    </Link>
-  </li>
-);
-
-const ThankYouMessage = ({ message }: { message: string }) => (
-  <li className='nav-link nav-link-flex nav-link-header' key='donate'>
-    {message}
-    <FontAwesomeIcon icon={faHeart} />
-  </li>
-);
-
 const DonateButton = ({
   isUserDonating,
   handleMenuKeyDown
 }: DonateButtonProps) => {
   const { t } = useTranslation();
-  if (isUserDonating) return <ThankYouMessage message={t('donate.thanks')} />;
   return (
-    <DonateItem
-      handleMenuKeyDown={handleMenuKeyDown}
-      donateText={t('buttons.donate')}
-    />
-  );
-};
-
-const toggleTheme = (
-  currentTheme = Themes.Default,
-  toggleNightMode: typeof updateMyTheme
-) => {
-  toggleNightMode(
-    currentTheme === Themes.Night ? Themes.Default : Themes.Night
+    <li key={isUserDonating ? 'supporter' : 'donate'}>
+      <Link
+        className={`nav-link nav-link-flex nav-link-header ${
+          isUserDonating && 'nav-link-supporter'
+        }`}
+        onKeyDown={handleMenuKeyDown}
+        sameTab={false}
+        to={isUserDonating ? '/supporters' : '/donate'}
+        data-test-label={
+          isUserDonating ? 'dropdown-support-button' : 'dropdown-donate-button'
+        }
+      >
+        {isUserDonating ? (
+          <>
+            {t('buttons.supporters')}
+            <SupporterBadge />
+          </>
+        ) : (
+          <>{t('buttons.donate')}</>
+        )}
+      </Link>
+    </li>
   );
 };
 
@@ -87,15 +77,12 @@ function NavLinks({
   openSignoutModal,
   hideMenu,
   displayMenu,
-  toggleNightMode,
-  user
+  user,
+  theme,
+  toggleTheme
 }: NavLinksProps) {
   const { t } = useTranslation();
-  const {
-    isDonating: isUserDonating,
-    username: currentUserName,
-    theme: currentUserTheme
-  } = user || {};
+  const { isDonating: isUserDonating, username: currentUserName } = user || {};
 
   // the accessibility tree just needs a little more time to pick up the change.
   // This function allows us to set aria-expanded to false and then delay just a bit before setting focus on the button
@@ -153,6 +140,7 @@ function NavLinks({
   return (
     <ul
       aria-labelledby='toggle-button-nav'
+      data-playwright-test-label='header-menu'
       className={`nav-list${displayMenu ? ' display-menu' : ''}`}
     >
       <DonateButton
@@ -197,6 +185,8 @@ function NavLinks({
           to={t('links:nav.forum')}
         >
           <span>{t('buttons.forum')}</span>
+          <span className='sr-only'>, {t('aria.opens-new-window')}</span>
+
           <FontAwesomeIcon icon={faExternalLinkAlt} />
         </Link>
       </li>
@@ -209,6 +199,7 @@ function NavLinks({
           to={t('links:nav.news')}
         >
           <span>{t('buttons.news')}</span>
+          <span className='sr-only'>, {t('aria.opens-new-window')}</span>
           <FontAwesomeIcon icon={faExternalLinkAlt} />
         </Link>
       </li>
@@ -221,6 +212,7 @@ function NavLinks({
           to={radioLocation}
         >
           <span>{t('buttons.radio')}</span>
+          <span className='sr-only'>, {t('aria.opens-new-window')}</span>
           <FontAwesomeIcon icon={faExternalLinkAlt} />
         </Link>
       </li>
@@ -233,45 +225,35 @@ function NavLinks({
           to={t('links:nav.contribute')}
         >
           <span>{t('buttons.contribute')}</span>
+          <span className='sr-only'>, {t('aria.opens-new-window')}</span>
+          <FontAwesomeIcon icon={faExternalLinkAlt} />
+        </Link>
+      </li>
+      <li key='podcast'>
+        <Link
+          className='nav-link nav-link-flex'
+          external={true}
+          onKeyDown={handleMenuKeyDown}
+          sameTab={false}
+          to={t('links:nav.podcast')}
+        >
+          <span>{t('buttons.podcast')}</span>
+          <span className='sr-only'>, {t('aria.opens-new-window')}</span>
           <FontAwesomeIcon icon={faExternalLinkAlt} />
         </Link>
       </li>
       <li className='nav-line' key='theme'>
         <button
-          {...(!currentUserName && { 'aria-describedby': 'theme-sign-in' })}
-          aria-disabled={!currentUserName}
-          aria-pressed={currentUserTheme === Themes.Night ? 'true' : 'false'}
-          className={
-            'nav-link nav-link-flex' +
-            (!currentUserName ? ' nav-link-header' : '')
-          }
-          onClick={() => {
-            if (currentUserName) {
-              toggleTheme(currentUserTheme, toggleNightMode);
-            }
-          }}
+          aria-pressed={theme === LocalStorageThemes.Dark}
+          className={'nav-link nav-link-flex'}
+          onClick={toggleTheme}
           onKeyDown={currentUserName ? handleMenuKeyDown : handleSignOutKeys}
         >
-          {currentUserName ? (
-            <>
-              <span>{t('settings.labels.night-mode')}</span>
-              {currentUserTheme === Themes.Night ? (
-                <FontAwesomeIcon icon={faCheckSquare} />
-              ) : (
-                <FontAwesomeIcon icon={faSquare} />
-              )}
-            </>
+          <span>{t('settings.labels.night-mode')}</span>
+          {theme === LocalStorageThemes.Dark ? (
+            <FontAwesomeIcon icon={faCheckSquare} />
           ) : (
-            <Fragment key='night-mode'>
-              <span className='sr-only'>{t('settings.labels.night-mode')}</span>
-              <span
-                aria-hidden='true'
-                className='nav-link-dull'
-                id='theme-sign-in'
-              >
-                {t('misc.change-theme')}
-              </span>
-            </Fragment>
+            <FontAwesomeIcon icon={faSquare} />
           )}
         </button>
       </li>
@@ -293,4 +275,7 @@ function NavLinks({
 
 NavLinks.displayName = 'NavLinks';
 
-export default connect(null, mapDispatchToProps)(withTranslation()(NavLinks));
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withTranslation()(NavLinks));

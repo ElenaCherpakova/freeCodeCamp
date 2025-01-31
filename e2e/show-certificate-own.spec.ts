@@ -1,17 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
-test.use({ storageState: 'playwright/.auth/certified-user.json' });
-
 test.describe('Show certification own', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     await page.goto('/certification/certifieduser/responsive-web-design');
-  });
-
-  test.afterAll(async () => {
-    await page.close();
   });
 
   test('should display the certificate details', async () => {

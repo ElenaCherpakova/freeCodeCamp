@@ -1,22 +1,24 @@
 import React from 'react';
-import { Col, Row } from '@freecodecamp/react-bootstrap';
 import Helmet from 'react-helmet';
-
-import { Container } from '@freecodecamp/ui';
-import { Spacer } from '../components/helpers';
+import { Container, Col, Row, Spacer } from '@freecodecamp/ui';
 
 function BlockedPage(): JSX.Element {
   return (
     <>
       <Helmet title={`Access Denied | freeCodeCamp.org`} />
       <Container className='text-center'>
-        <Spacer size='large' />
+        <Spacer size='l' />
         <Row>
           <Col lg={8} lgOffset={2} sm={10} smOffset={1} xs={12}>
-            <h1 id='content-start'>We can&apos;t log you in.</h1>
-            <Spacer size='large' />
+            <h1 id='content-start' data-playwright-test-label='main-heading'>
+              We can&apos;t log you in.
+            </h1>
+            <Spacer size='l' />
             <Col lg={10} lgOffset={1} sm={10} smOffset={1} xs={12}>
-              <div className='text-left blocked-body'>
+              <div
+                className='text-start'
+                data-playwright-test-label='blocked-body-text'
+              >
                 <p>
                   United States export control and economic sanctions rules
                   don&apos;t allow us to log in visitors from your region. Sorry
@@ -24,7 +26,10 @@ function BlockedPage(): JSX.Element {
                 </p>
                 <p>
                   If you want, you can{' '}
-                  <a href='https://www.okta.com/blocked'>
+                  <a
+                    href='https://www.okta.com/blocked'
+                    data-playwright-test-label='learn-more-link'
+                  >
                     learn more about these restrictions
                   </a>
                   .
@@ -33,7 +38,7 @@ function BlockedPage(): JSX.Element {
             </Col>
           </Col>
         </Row>
-        <Spacer size='large' />
+        <Spacer size='l' />
       </Container>
     </>
   );

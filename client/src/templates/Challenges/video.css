@@ -7,7 +7,8 @@
 }
 .video-wrapper iframe,
 .video-wrapper object,
-.video-wrapper embed {
+.video-wrapper embed,
+.video-wrapper .display-youtube-video {
   position: absolute;
   top: 0;
   left: 0;
@@ -72,11 +73,6 @@
   border-bottom: 4px solid var(--tertiary-background);
 }
 
-.video-quiz-input-hidden {
-  position: absolute;
-  left: -9999px;
-}
-
 .video-quiz-input-visible {
   margin-inline-end: 15px;
   position: relative;
@@ -89,6 +85,11 @@
   border-radius: 50%;
   background-color: var(--secondary-background);
   border: 2px solid var(--primary-color);
+}
+
+input:focus-visible + .video-quiz-input-visible {
+  outline: 3px solid var(--focus-outline-color);
+  outline-offset: 2px;
 }
 
 .video-quiz-selected-input {
@@ -113,4 +114,39 @@
   margin: 0;
   /* remove default prism background */
   background: none;
+}
+
+.mcq-correct-border {
+  border-left-color: var(--success-background);
+}
+
+.mcq-incorrect-border {
+  border-left-color: var(--danger-background);
+}
+
+.mcq-correct {
+  color: var(--success-color);
+  border-left-color: var(--success-background);
+}
+
+.mcq-incorrect {
+  color: var(--danger-color);
+  border-left-color: var(--danger-background);
+}
+
+.mcq-hide-border {
+  border-bottom: none;
+}
+
+.mcq-feedback {
+  border-top: none;
+  display: block;
+}
+
+.mcq-prism-correct code {
+  color: var(--success-color);
+}
+
+.mcq-prism-incorrect code {
+  color: var(--danger-color);
 }

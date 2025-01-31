@@ -5,11 +5,14 @@ import type {
   ChallengeFile,
   ChallengeFiles,
   CompletedChallenge,
+  ExamTokenResponse,
   GenerateExamResponseWithData,
   SavedChallenge,
   SavedChallengeFile,
+  SurveyResults,
   User
 } from '../redux/prop-types';
+import { DonationDuration } from '../../../shared/config/donation-settings';
 
 const { apiLocation } = envData;
 
@@ -35,7 +38,10 @@ export interface ResponseWithData<T> {
 // TODO: Might want to handle flash messages as close to the request as possible
 // to make use of the Response object (message, status, etc)
 async function get<T>(path: string): Promise<ResponseWithData<T>> {
-  const response = await fetch(`${base}${path}`, defaultOptions);
+  const response = await fetch(`${base}${path}`, {
+    ...defaultOptions,
+    headers: { 'CSRF-Token': getCSRFToken() }
+  });
 
   return combineDataWithResponse(response);
 }
@@ -237,6 +243,10 @@ export function addDonation(body: Donation): Promise<ResponseWithData<void>> {
   return post('/donate/add-donation', body);
 }
 
+export function updateStripeCard() {
+  return put('/donate/update-stripe-card', {});
+}
+
 export function postChargeStripe(
   body: Donation
 ): Promise<ResponseWithData<void>> {
@@ -248,6 +258,37 @@ export function postChargeStripeCard(
 ): Promise<ResponseWithData<void>> {
   return post('/donate/charge-stripe-card', body);
 }
+
+export function generateExamToken(): Promise<
+  ResponseWithData<ExamTokenResponse>
+> {
+  return post('/user/exam-environment/token', {});
+}
+
+type PaymentIntentResponse = Promise<
+  ResponseWithData<
+    | {
+        clientSecret?: never;
+        subscriptionId?: never;
+        error: string;
+      }
+    | {
+        clientSecret: string;
+        subscriptionId: string;
+        error?: never;
+      }
+  >
+>;
+
+export function createStripePaymentIntent(body: {
+  email: string | undefined;
+  name: string | undefined;
+  amount: number;
+  duration: DonationDuration;
+}): PaymentIntentResponse {
+  return post('/donate/create-stripe-payment-intent', body);
+}
+
 interface Report {
   username: string;
   reportDescription: string;
@@ -284,6 +325,12 @@ export function postSaveChallenge(body: {
   return post('/save-challenge', body);
 }
 
+export function postSubmitSurvey(body: {
+  surveyResults: SurveyResults;
+}): Promise<ResponseWithData<void>> {
+  return post('/user/submit-survey', body);
+}
+
 /** PUT **/
 
 interface MyAbout {
@@ -314,12 +361,6 @@ export function putUpdateMySocials(
   update: Record<string, string>
 ): Promise<ResponseWithData<void>> {
   return put('/update-my-socials', update);
-}
-
-export function putUpdateMyTheme(
-  update: Record<string, string>
-): Promise<ResponseWithData<void>> {
-  return put('/update-my-theme', update);
 }
 
 export function putUpdateMyKeyboardShortcuts(

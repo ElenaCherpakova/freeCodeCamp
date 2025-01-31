@@ -7,6 +7,7 @@ import fetch from 'node-fetch';
 import {
   fixCompletedChallengeItem,
   fixCompletedExamItem,
+  fixCompletedSurveyItem,
   fixPartiallyCompletedChallengeItem,
   fixSavedChallengeItem
 } from '../../common/utils';
@@ -24,6 +25,7 @@ import {
   encodeUserToken
 } from '../middlewares/user-token';
 import { createDeleteMsUsername } from '../middlewares/ms-username';
+import { validateSurvey, createDeleteUserSurveys } from '../middlewares/survey';
 import { deprecatedEndpoint } from '../utils/disabled-endpoints';
 
 const log = debugFactory('fcc:boot:user');
@@ -39,7 +41,8 @@ function bootUser(app) {
   const deleteUserToken = createDeleteUserToken(app);
   const postMsUsername = createPostMsUsername(app);
   const deleteMsUsername = createDeleteMsUsername(app);
-
+  const postSubmitSurvey = createPostSubmitSurvey(app);
+  const deleteUserSurveys = createDeleteUserSurveys(app);
   api.get('/account', sendNonUserToHome, deprecatedEndpoint);
   api.get('/account/unlink/:social', sendNonUserToHome, getUnlinkSocial);
   api.get('/user/get-session-user', getSessionUser);
@@ -48,6 +51,7 @@ function bootUser(app) {
     ifNoUser401,
     deleteUserToken,
     deleteMsUsername,
+    deleteUserSurveys,
     postDeleteAccount
   );
   api.post(
@@ -55,6 +59,7 @@ function bootUser(app) {
     ifNoUser401,
     deleteUserToken,
     deleteMsUsername,
+    deleteUserSurveys,
     postResetProgress
   );
   api.post(
@@ -78,6 +83,13 @@ function bootUser(app) {
     ifNoUser401,
     deleteMsUsername,
     deleteMsUsernameResponse
+  );
+
+  api.post(
+    '/user/submit-survey',
+    ifNoUser401,
+    validateSurvey,
+    postSubmitSurvey
   );
 
   app.use(api);
@@ -112,6 +124,17 @@ function deleteUserTokenResponse(req, res) {
   return res.send({ userToken: null });
 }
 
+export const getMsTranscriptApiUrl = msTranscript => {
+  // example msTranscriptUrl: https://learn.microsoft.com/en-us/users/mot01/transcript/8u6awert43q1plo
+  const url = new URL(msTranscript);
+
+  const transcriptUrlRegex = /\/transcript\/([^/]+)\/?/;
+  const id = transcriptUrlRegex.exec(url.pathname)?.[1];
+  return `https://learn.microsoft.com/api/profiles/transcript/share/${
+    id ?? ''
+  }`;
+};
+
 function createPostMsUsername(app) {
   const { MsUsername } = app.models;
 
@@ -123,31 +146,29 @@ function createPostMsUsername(app) {
     const { msTranscriptUrl } = req.body;
 
     if (!msTranscriptUrl) {
-      return res
-        .status(400)
-        .send('Please include a Microsoft transcript URL in request');
+      return res.status(400).json({
+        type: 'error',
+        message: 'flash.ms.transcript.link-err-1'
+      });
     }
 
-    const msTranscriptId = msTranscriptUrl.split('/').pop();
-    const msTranscriptApiUrl = `https://learn.microsoft.com/api/profiles/transcript/share/${msTranscriptId}`;
+    const msTranscriptApiUrl = getMsTranscriptApiUrl(msTranscriptUrl);
 
     try {
       const msApiRes = await fetch(msTranscriptApiUrl);
 
       if (!msApiRes.ok) {
-        res.status(500);
-        throw new Error(
-          'An error occurred trying to get your Microsoft transcript'
-        );
+        return res
+          .status(404)
+          .json({ type: 'error', message: 'flash.ms.transcript.link-err-2' });
       }
 
       const { userName } = await msApiRes.json();
 
       if (!userName) {
-        res.status(500);
-        throw new Error(
-          'An error occured trying to link your Microsoft account'
-        );
+        return res
+          .status(500)
+          .json({ type: 'error', message: 'flash.ms.transcript.link-err-3' });
       }
 
       // Don't create if username is used by another fCC account
@@ -156,7 +177,9 @@ function createPostMsUsername(app) {
       });
 
       if (usernameUsed) {
-        throw new Error('That username is already used');
+        return res
+          .status(403)
+          .json({ type: 'error', message: 'flash.ms.transcript.link-err-4' });
       }
 
       await MsUsername.destroyAll({ userId: req.user.id });
@@ -169,32 +192,80 @@ function createPostMsUsername(app) {
       });
 
       if (!newMsUsername?.id) {
-        res.status(500);
-        throw new Error(
-          'An error occured trying to link your Microsoft account'
-        );
+        return res
+          .status(500)
+          .json({ type: 'error', message: 'flash.ms.transcript.link-err-5' });
       }
 
       return res.json({ msUsername: userName });
     } catch (e) {
       log(e);
-      return res.send(e.message);
+      return res
+        .status(500)
+        .json({ type: 'error', message: 'flash.ms.transcript.link-err-6' });
     }
   };
 }
 
 function deleteMsUsernameResponse(req, res) {
   if (!req.msUsernameDeleted) {
-    return res
-      .status(500)
-      .send('An error occurred trying to unlink your Microsoft username');
+    return res.status(500).json({
+      type: 'error',
+      message: 'flash.ms.transcript.unlink-err'
+    });
   }
 
   return res.send({ msUsername: null });
 }
 
+function createPostSubmitSurvey(app) {
+  const { Survey } = app.models;
+
+  return async function postSubmitSurvey(req, res) {
+    const { user, body } = req;
+    const { surveyResults } = body;
+    const { id: userId } = user;
+    const { title } = surveyResults;
+
+    const completedSurveys = await Survey.find({
+      where: { userId }
+    });
+
+    const surveyAlreadyTaken = completedSurveys.some(s => s.title === title);
+    if (surveyAlreadyTaken) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'flash.survey.err-2'
+      });
+    }
+
+    try {
+      const newSurvey = {
+        ...surveyResults,
+        userId: user.id
+      };
+
+      const createdSurvey = await Survey.create(newSurvey);
+      if (!createdSurvey) {
+        throw new Error('Error creating survey');
+      }
+
+      return res.json({
+        type: 'success',
+        message: 'flash.survey.success'
+      });
+    } catch (e) {
+      log(e);
+      return res.status(500).json({
+        type: 'error',
+        message: 'flash.survey.err-3'
+      });
+    }
+  };
+}
+
 function createReadSessionUser(app) {
-  const { MsUsername, UserToken } = app.models;
+  const { MsUsername, Survey, UserToken } = app.models;
 
   return async function getSessionUser(req, res, next) {
     const queryUser = req.user;
@@ -223,6 +294,18 @@ function createReadSessionUser(app) {
         : null;
 
       msUsername = msUser ? msUser.msUsername : undefined;
+    } catch (e) {
+      return next(e);
+    }
+
+    let completedSurveys;
+    try {
+      const userId = queryUser?.id;
+      completedSurveys = userId
+        ? await Survey.find({
+            where: { userId }
+          })
+        : [];
     } catch (e) {
       return next(e);
     }
@@ -269,7 +352,8 @@ function createReadSessionUser(app) {
             ...normaliseUserFields(user),
             joinDate: user.id.getTimestamp(),
             userToken: encodedUserToken,
-            msUsername
+            msUsername,
+            completedSurveys: completedSurveys.map(fixCompletedSurveyItem)
           }
         },
         result: user.username
@@ -367,6 +451,7 @@ function postResetProgress(req, res, next) {
       isRelationalDatabaseCertV8: false,
       isCollegeAlgebraPyCertV8: false,
       isFoundationalCSharpCertV8: false,
+      isJsAlgoDataStructCertV8: false,
       completedChallenges: [],
       completedExams: [],
       savedChallenges: [],
@@ -446,4 +531,5 @@ function createPostReportUserProfile(app) {
     );
   };
 }
+
 export default bootUser;

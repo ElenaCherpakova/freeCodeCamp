@@ -1,6 +1,4 @@
 name: CI - Node.js
-env:
-  NODE_OPTIONS: '--max_old_space_size=6144'
 
 on:
   # Run on push events, but only for the below branches
@@ -17,21 +15,27 @@ on:
   merge_group:
     types: [checks_requested]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
       fail-fast: false
 
     steps:
       - name: Checkout Source Files
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
 
       - name: Check number of lockfiles
         run: |
@@ -42,12 +46,12 @@ jobs:
           fi
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -55,18 +59,21 @@ jobs:
       - name: Set Environment variables
         run: |
           cp sample.env .env
-          echo 'SHOW_NEW_CURRICULUM=true' >> .env
           cat .env
+
+      - name: Install node_modules
+        run: pnpm install
+
+      - name: Check formatting
+        run: |
+          pnpm prettier --check . || [ $? -eq 1 ] && printf "\nTip: Run 'pnpm run format' in your terminal to fix this.\n\n"
 
       # The two prefixed installs are for the client update which are not,
       # currently, built as workspaces.
       - name: Lint Source Files
         run: |
           echo pnpm version $(pnpm -v)
-          pnpm install
           pnpm run create:shared
-          npm i --prefix=curriculum-server
-          npm i --prefix=web
           pnpm run build:curriculum
           pnpm run lint
 
@@ -75,28 +82,31 @@ jobs:
   build:
     name: Build
     needs: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
 
     steps:
       - name: Checkout Source Files
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Set freeCodeCamp Environment Variables
-        run: cp sample.env .env
+        run: |
+          cp sample.env .env
 
       - name: Install and Build
         run: |
@@ -106,24 +116,26 @@ jobs:
   test:
     name: Test
     needs: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
 
     steps:
       - name: Checkout Source Files
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -144,8 +156,9 @@ jobs:
         run: |
           echo pnpm version $(pnpm -v)
           pnpm install
-          pnpm run create:shared
-          pnpm run build:curriculum
+
+      - name: Install Chrome for Puppeteer
+        run: pnpm -F=curriculum install-puppeteer
 
       - name: Run Tests
         run: pnpm test
@@ -153,24 +166,26 @@ jobs:
   test-upcoming:
     name: Test - Upcoming Changes
     needs: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
 
     steps:
       - name: Checkout Source Files
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -179,7 +194,6 @@ jobs:
         run: |
           cp sample.env .env
           echo 'SHOW_UPCOMING_CHANGES=true' >> .env
-          echo 'SHOW_NEW_CURRICULUM=true' >> .env
           cat .env
 
       - name: Start MongoDB
@@ -193,8 +207,9 @@ jobs:
         run: |
           echo pnpm version $(pnpm -v)
           pnpm install
-          pnpm run create:shared
-          pnpm run build:curriculum
+
+      - name: Install Chrome for Puppeteer
+        run: pnpm -F=curriculum install-puppeteer
 
       - name: Run Tests
         run: pnpm test
@@ -202,25 +217,27 @@ jobs:
   test-localization:
     name: Test - i18n
     needs: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
         locale: [portuguese, italian]
 
     steps:
       - name: Checkout Source Files
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          submodules: 'recursive'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -244,7 +261,6 @@ jobs:
         run: |
           echo pnpm version $(pnpm -v)
           pnpm install
-          pnpm run create:shared
 
       # DONT REMOVE THIS STEP.
       # TODO: Refactor and use re-usable workflow and shared artifacts
@@ -254,6 +270,9 @@ jobs:
           CLIENT_LOCALE: ${{ matrix.locale }}
         run: |
           pnpm run build
+
+      - name: Install Chrome for Puppeteer
+        run: pnpm -F=curriculum install-puppeteer
 
       - name: Run Tests
         env:

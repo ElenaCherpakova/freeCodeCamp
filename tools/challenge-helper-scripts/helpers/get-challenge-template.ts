@@ -1,6 +1,11 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import ObjectID from 'bson-objectid';
 
-export interface ChallengeOptions {
+const sanitizeTitle = (title: string) => {
+  return title.includes(':') || title.includes("'") ? `"${title}"` : title;
+};
+
+interface ChallengeOptions {
   challengeId: ObjectID;
   title: string;
   dashedName: string;
@@ -14,7 +19,7 @@ const buildFrontMatter = ({
   challengeType
 }: ChallengeOptions) => `---
 id: ${challengeId.toString()}
-title: ${title}
+title: ${sanitizeTitle(title)}
 challengeType: ${challengeType}
 dashedName: ${dashedName}
 ---`;
@@ -27,12 +32,12 @@ const buildFrontMatterWithVideo = ({
 }: ChallengeOptions) => `---
 id: ${challengeId.toString()}
 videoId: ADD YOUR VIDEO ID HERE!!!
-title: ${title}
+title: ${sanitizeTitle(title)}
 challengeType: ${challengeType}
 dashedName: ${dashedName}
 ---`;
 
-export const getLegacyChallengeTemplate = (
+const getLegacyChallengeTemplate = (
   options: ChallengeOptions
 ): string => `${buildFrontMatter(options)}
 
@@ -65,38 +70,461 @@ Test 1
 \`\`\`
 `;
 
-export const getQuizChallengeTemplate = (
+const getQuizChallengeTemplate = (
   options: ChallengeOptions
 ): string => `${buildFrontMatter(options)}
 
 # --description--
 
-${options.title} description.
+To pass the quiz, you must correctly answer at least 17 of the 20 questions below.
 
-# --question--
+# --quizzes--
 
-## --text--
+## --quiz--
 
-${options.title} question?
+### --question--
 
-## --answers--
+#### --text--
 
-Answer 1
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
 
 ---
 
-Answer 2
+Placeholder distractor 2
 
 ---
 
-Answer 3
+Placeholder distractor 3
 
-## --video-solution--
+#### --answer--
 
-1
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
+### --question--
+
+#### --text--
+
+Placeholder question
+
+#### --distractors--
+
+Placeholder distractor 1
+
+---
+
+Placeholder distractor 2
+
+---
+
+Placeholder distractor 3
+
+#### --answer--
+
+Placeholder answer
+
 `;
 
-export const getVideoChallengeTemplate = (
+const getVideoChallengeTemplate = (
   options: ChallengeOptions
 ): string => `${buildFrontMatterWithVideo(options)}
 
@@ -127,7 +555,7 @@ Answer 3
 1
 `;
 
-export const getAssignmentChallengeTemplate = (
+const getAssignmentChallengeTemplate = (
   options: ChallengeOptions
 ): string => `${buildFrontMatter(options)}
 
@@ -135,11 +563,11 @@ export const getAssignmentChallengeTemplate = (
 
 ${options.title} description.
 
-# --question--
-
-## --assignment--
+# --assignment--
 
 ${options.title} assignment!
+
+# --question--
 
 ## --text--
 
@@ -162,6 +590,109 @@ Answer 3
 1
 `;
 
+const getMultipleChoiceChallengeTemplate = (
+  options: ChallengeOptions
+): string => `${buildFrontMatter(options)}
+
+# --description--
+
+${options.title} description.
+
+# --questions--
+
+## --text--
+
+${options.title} question?
+
+## --answers--
+
+Answer 1
+
+### --feedback--
+
+Include feedback for answer 1 here, but remove these last four lines if this is the correct answer.
+
+---
+
+Answer 2
+
+### --feedback--
+
+Include feedback for answer 2 here, but remove these last four lines if this is the correct answer.
+
+---
+
+Answer 3
+
+### --feedback--
+
+Include feedback for answer 3 here, but remove these last four lines if this is the correct answer.
+
+---
+
+Answer 4
+
+### --feedback--
+
+Include feedback for answer 4 here, but remove these last four lines if this is the correct answer.
+
+## --video-solution--
+
+1
+`;
+
+const getFillInTheBlankChallengeTemplate = (
+  options: ChallengeOptions
+): string => `${buildFrontMatter(options)}
+
+# --description--
+
+${options.title} description.
+
+# --fillInTheBlank--
+
+## --sentence--
+
+\`Fill BLANK the BLANK sentence.\`
+
+## --blanks--
+
+\`in\`
+
+### --feedback--
+
+It's \`in\`
+
+---
+
+\`blank\`
+`;
+
+const getDialogueChallengeTemplate = (
+  options: ChallengeOptions
+): string => `${buildFrontMatter(options)}
+
+# --description--
+
+Watch the video below to understand the context of the upcoming lessons.
+
+# --assignment--
+
+Watch the video.
+`;
+
+type Template = (opts: ChallengeOptions) => string;
+
+export const getTemplate = (challengeType: string): Template => {
+  const template = challengeTypeToTemplate[challengeType];
+  if (!template) {
+    throw Error(`Challenge type ${challengeType} has no template.
+To create one, please add a new function to this file and include it in the challengeTypeToTemplate map.
+`);
+  }
+  return template;
+};
+
 /**
  * This should be kept in parity with the challengeTypes in the
  * client.
@@ -169,8 +700,9 @@ Answer 3
  * Keys are explicitly marked null so we know the challenge type itself
  * exists, and can expand this to use the correct template later on.
  */
-export const challengeTypeToTemplate: {
-  [key: string]: null | ((opts: ChallengeOptions) => string);
+
+const challengeTypeToTemplate: {
+  [key: string]: null | Template;
 } = {
   0: getLegacyChallengeTemplate,
   1: getLegacyChallengeTemplate,
@@ -191,5 +723,8 @@ export const challengeTypeToTemplate: {
   16: null,
   17: null,
   18: null,
-  19: null
+  19: getMultipleChoiceChallengeTemplate,
+  20: null,
+  21: getDialogueChallengeTemplate,
+  22: getFillInTheBlankChallengeTemplate
 };

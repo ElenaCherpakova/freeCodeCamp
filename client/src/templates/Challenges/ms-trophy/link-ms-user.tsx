@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import {
-  Button,
-  FormGroup,
-  ControlLabel,
-  FormControl,
-  HelpBlock
-} from '@freecodecamp/react-bootstrap';
 import { ConnectedProps, connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import type { Dispatch } from 'redux';
 import { createSelector } from 'reselect';
 import { Trans, useTranslation } from 'react-i18next';
+import {
+  ControlLabel,
+  FormControl,
+  FormGroup,
+  HelpBlock,
+  Button,
+  Spacer
+} from '@freecodecamp/ui';
 
-import { Spacer } from '../../../components/helpers';
 import { isMicrosoftTranscriptLink } from '../../../../../shared/utils/validate';
 import {
   linkMsUsername,
@@ -25,6 +25,7 @@ import {
   isProcessingSelector
 } from '../../../redux/selectors';
 import Login from '../../../components/Header/components/login';
+import ChallengeHeading from '../components/challenge-heading';
 
 import './link-ms-user.css';
 
@@ -86,8 +87,8 @@ function LinkMsUser({
 
   return !isSignedIn ? (
     <>
-      <h2 className='link-ms-user-title'>{t('learn.ms.link-header')}</h2>
-      <Spacer size='small' />
+      <ChallengeHeading heading={t('learn.ms.link-header')} />
+      <Spacer size='xs' />
 
       <p>{t('learn.ms.link-signin')}</p>
       <Login />
@@ -99,8 +100,7 @@ function LinkMsUser({
           <p>{t('learn.ms.linked', { msUsername })}</p>
           <Button
             block={true}
-            bsStyle='primary'
-            className='btn-invert'
+            variant='primary'
             disabled={isProcessing}
             onClick={unlinkMsUsername}
           >
@@ -109,8 +109,8 @@ function LinkMsUser({
         </>
       ) : (
         <div>
-          <h2 className='link-ms-user-title'>{t('learn.ms.link-header')}</h2>
-          <Spacer size='small' />
+          <ChallengeHeading heading={'learn.ms.link-header'} />
+          <Spacer size='xs' />
 
           <p>{t('learn.ms.unlinked')}</p>
           <ol className='link-ms-user-ol'>
@@ -136,13 +136,14 @@ function LinkMsUser({
             <li>{t('learn.ms.link-li-6')}</li>
           </ol>
 
-          <Spacer size='medium' />
+          <Spacer size='m' />
           <form onSubmit={handleLinkUsername}>
             <FormGroup validationState={isValid ? 'success' : 'error'}>
-              <ControlLabel>
+              <ControlLabel htmlFor='transcript-link'>
                 <strong>{t('learn.ms.transcript-label')}</strong>
               </ControlLabel>
               <FormControl
+                id='transcript-link'
                 type='url'
                 onChange={handleInputChange}
                 placeholder='https://learn.microsoft.com/en-us/users/username/transcript/transcriptId'
@@ -151,8 +152,7 @@ function LinkMsUser({
             <Button
               disabled={isDisabled}
               block={true}
-              bsStyle='primary'
-              className='btn-invert'
+              variant='primary'
               onClick={handleLinkUsername}
             >
               {t('buttons.link-account')}

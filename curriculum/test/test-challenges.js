@@ -25,22 +25,33 @@ require('@babel/register')({
 });
 const {
   buildDOMChallenge,
-  buildJSChallenge,
-  buildPythonChallenge
+  buildPythonChallenge,
+  buildChallenge,
+  buildFunctions
 } = require('../../client/src/templates/Challenges/utils/build');
 const {
-  default: createWorker
+  WorkerExecutor
 } = require('../../client/src/templates/Challenges/utils/worker-executor');
-const { challengeTypes } = require('../../shared/config/challenge-types');
+const {
+  challengeTypes,
+  hasNoSolution
+} = require('../../shared/config/challenge-types');
 // the config files are created during the build, but not before linting
-const testEvaluator =
+const javaScriptTestEvaluator =
   require('../../client/config/browser-scripts/test-evaluator.json').filename;
+const pythonTestEvaluator =
+  require('../../client/config/browser-scripts/python-test-evaluator.json').filename;
 
 const { getLines } = require('../../shared/utils/get-lines');
 
 const { getChallengesForLang, getMetaForBlock } = require('../get-challenges');
 const { challengeSchemaValidator } = require('../schema/challenge-schema');
 const { testedLang, getSuperOrder } = require('../utils');
+const {
+  createHeader,
+  testId
+} = require('../../client/src/templates/Challenges/utils/frame');
+const { SuperBlocks } = require('../../shared/config/curriculum');
 const ChallengeTitles = require('./utils/challenge-titles');
 const MongoIds = require('./utils/mongo-ids');
 const createPseudoWorker = require('./utils/pseudo-worker');
@@ -72,6 +83,7 @@ const handleRejection = err => {
 
 const dom = new jsdom.JSDOM('');
 global.document = dom.window.document;
+global.DOMParser = dom.window.DOMParser;
 
 const oldRunnerFail = Mocha.Runner.prototype.fail;
 Mocha.Runner.prototype.fail = function (test, err) {
@@ -101,14 +113,24 @@ spinner.text = 'Populate tests.';
 
 let browser;
 let page;
+// This worker can be reused since it clears its environment between tests.
+let pythonWorker;
 
 setup()
   .then(runTests)
   .catch(err => handleRejection(err));
 
 async function setup() {
-  if (process.env.FCC_SUPERBLOCK && process.env.FCC_BLOCK) {
-    throw new Error(`Please do not use both a block and superblock as input.`);
+  if (
+    [
+      process.env.FCC_BLOCK,
+      process.env.FCC_CHALLENGE_ID,
+      process.env.FCC_SUPERBLOCK
+    ].filter(Boolean).length > 1
+  ) {
+    throw new Error(
+      `Please use at most single input from: block, challenge id, superblock.`
+    );
   }
 
   // liveServer starts synchronously
@@ -129,9 +151,14 @@ async function setup() {
       // because Docker’s default for /dev/shm is 64MB
       '--disable-dev-shm-usage'
       // dumpio: true
-    ]
+    ],
+    headless: 'new'
   });
   global.Worker = createPseudoWorker(await newPageContext(browser));
+
+  pythonWorker = new WorkerExecutor(pythonTestEvaluator, {
+    terminateWorker: false
+  });
   page = await newPageContext(browser);
   await page.setViewport({ width: 300, height: 150 });
 
@@ -179,6 +206,27 @@ async function setup() {
     }
   }
 
+  if (process.env.FCC_CHALLENGE_ID) {
+    console.log(`\nChallenge Id being tested: ${process.env.FCC_CHALLENGE_ID}`);
+    const challengeIndex = challenges.findIndex(
+      challenge => challenge.id === process.env.FCC_CHALLENGE_ID
+    );
+    if (challengeIndex === -1) {
+      throw new Error(
+        `No challenge found with id "${process.env.FCC_CHALLENGE_ID}"`
+      );
+    }
+    const { solutions = [] } = challenges[challengeIndex];
+    if (isEmpty(solutions)) {
+      // Project based curriculum usually has solution for current challenge in
+      // next challenge's seed.
+      challenges = challenges.slice(challengeIndex, challengeIndex + 2);
+    } else {
+      // Only one challenge is tested, but tests assume challenges is an array.
+      challenges = [challenges[challengeIndex]];
+    }
+  }
+
   const meta = {};
   for (const challenge of challenges) {
     const dashedBlockName = challenge.block;
@@ -192,7 +240,8 @@ async function setup() {
   return {
     meta,
     challenges,
-    lang
+    lang,
+    superBlocks: targetSuperBlockStrings
   };
 }
 
@@ -233,25 +282,15 @@ async function getChallenges(lang) {
   return sortChallenges(challenges);
 }
 
-function populateTestsForLang({ lang, challenges, meta }) {
+function populateTestsForLang({ lang, challenges, meta, superBlocks }) {
   const mongoIds = new MongoIds();
   const challengeTitles = new ChallengeTitles();
   const validateChallenge = challengeSchemaValidator();
 
-  if (!process.env.FCC_BLOCK) {
+  if (!process.env.FCC_BLOCK && !process.env.FCC_CHALLENGE_ID) {
     describe('Assert meta order', function () {
-      /** This array can be used to skip a superblock - we'll use this
-       * when we are working on the new project-based curriculum for
-       * a superblock (because keeping those challenges in order is
-       * tricky and needs cleaning up before deploying).
-       */
-      const superBlocksUnderDevelopment = [
-        '2022/javascript-algorithms-and-data-structures'
-      ];
       const superBlocks = new Set([
-        ...Object.values(meta)
-          .map(el => el.superBlock)
-          .filter(el => !superBlocksUnderDevelopment.includes(el))
+        ...Object.values(meta).map(el => el.superBlock)
       ]);
       superBlocks.forEach(superBlock => {
         const filteredMeta = Object.values(meta)
@@ -261,219 +300,243 @@ function populateTestsForLang({ lang, challenges, meta }) {
           return;
         }
         it(`${superBlock} should have the same order in every meta`, function () {
-          const firstOrder = getSuperOrder(filteredMeta[0].superBlock, {
-            showNewCurriculum: process.env.SHOW_NEW_CURRICULUM
-          });
+          const firstOrder = getSuperOrder(filteredMeta[0].superBlock);
           assert.isNumber(firstOrder);
           assert.isTrue(
             filteredMeta.every(
-              el =>
-                getSuperOrder(el.superBlock, {
-                  showNewCurriculum: process.env.SHOW_NEW_CURRICULUM
-                }) === firstOrder
+              el => getSuperOrder(el.superBlock) === firstOrder
             ),
             'The superOrder properties are mismatched.'
           );
         });
         filteredMeta.forEach((meta, index) => {
-          it(`${meta.superBlock} ${meta.name} must be in order`, function () {
-            assert.equal(meta.order, index);
-          });
+          // Upcoming changes are in developmen so are not required to be in
+          // order. FullStackDeveloper does not use the meta for order.
+          if (
+            !meta.isUpcomingChange &&
+            meta.superBlock !== SuperBlocks.FullStackDeveloper
+          ) {
+            it(`${meta.superBlock} ${meta.name} must be in order`, function () {
+              assert.equal(meta.order, index);
+            });
+          }
         });
       });
     });
   }
 
-  describe(`Check challenges (${lang})`, function () {
-    this.timeout(5000);
-    challenges.forEach((challenge, id) => {
-      const dashedBlockName = challenge.block;
-      // TODO: once certifications are not included in the list of challenges,
-      // stop returning early here.
-      if (typeof dashedBlockName === 'undefined') return;
-      describe(challenge.block || 'No block', function () {
-        describe(challenge.title || 'No title', function () {
-          // Note: the title in meta.json are purely for human readability and
-          // do not include translations, so we do not validate against them.
-          it('Matches an ID in meta.json', function () {
-            const index = meta[dashedBlockName]?.challengeOrder?.findIndex(
-              ({ id }) => id === challenge.id
-            );
+  superBlocks.forEach(superBlock => {
+    describe(`Language: ${lang}`, function () {
+      describe(`SuperBlock: ${superBlock}`, function () {
+        this.timeout(5000);
+        const superBlockChallenges = challenges.filter(
+          c => c.superBlock === superBlock
+        );
+        superBlockChallenges.forEach((challenge, id) => {
+          // When testing single challenge, in project based curriculum,
+          // challenge to test (current challenge) might not have solution.
+          // Instead seed from next challenge is tested against tests from
+          // current challenge. Next challenge is skipped from testing.
+          if (process.env.FCC_CHALLENGE_ID && id > 0) return;
 
-            if (index < 0) {
-              throw new AssertionError(
-                `Cannot find ID "${challenge.id}" in meta.json file for block "${dashedBlockName}"`
-              );
-            }
-          });
+          const dashedBlockName = challenge.block;
+          // TODO: once certifications are not included in the list of challenges,
+          // stop returning early here.
+          if (typeof dashedBlockName === 'undefined') return;
+          describe(`Block: ${challenge.block}`, function () {
+            describe(`Title: ${challenge.title}`, function () {
+              describe(`ID: ${challenge.id}`, function () {
+                // Note: the title in meta.json are purely for human readability and
+                // do not include translations, so we do not validate against them.
+                it('Matches an ID in meta.json', function () {
+                  const index = meta[
+                    dashedBlockName
+                  ]?.challengeOrder?.findIndex(({ id }) => id === challenge.id);
 
-          it('Common checks', function () {
-            const result = validateChallenge(challenge);
+                  if (index < 0) {
+                    throw new AssertionError(
+                      `Cannot find ID "${challenge.id}" in meta.json file for block "${dashedBlockName}"`
+                    );
+                  }
+                });
 
-            if (result.error) {
-              throw new AssertionError(result.error);
-            }
-            const { id, title, block, dashedName } = challenge;
-            assert.exists(
-              dashedName,
-              `Missing dashedName for challenge ${id} in ${block}.`
-            );
-            const pathAndTitle = `${block}/${dashedName}`;
-            const idVerificationMessage = mongoIds.check(id, title);
-            assert.isNull(idVerificationMessage, idVerificationMessage);
-            const dupeTitleCheck = challengeTitles.check(dashedName, block);
-            assert.isTrue(
-              dupeTitleCheck,
-              `All challenges within a block must have a unique dashed name. ${dashedName} (at ${pathAndTitle}) is already assigned`
-            );
-          });
+                it('Common checks', function () {
+                  const result = validateChallenge(challenge);
 
-          const { challengeType } = challenge;
-          // TODO: shouldn't this be a function in challenge-types.js?
-          if (
-            challengeType !== challengeTypes.html &&
-            challengeType !== challengeTypes.js &&
-            challengeType !== challengeTypes.jsProject &&
-            challengeType !== challengeTypes.modern &&
-            challengeType !== challengeTypes.backend &&
-            challengeType !== challengeTypes.python
-          ) {
-            return;
-          }
+                  if (result.error) {
+                    throw new AssertionError(result.error);
+                  }
+                  const { id, title, block, dashedName } = challenge;
+                  assert.exists(
+                    dashedName,
+                    `Missing dashedName for challenge ${id} in ${block}.`
+                  );
+                  const pathAndTitle = `${block}/${dashedName}`;
+                  const idVerificationMessage = mongoIds.check(id, title);
+                  assert.isNull(idVerificationMessage, idVerificationMessage);
+                  const dupeTitleCheck = challengeTitles.check(
+                    dashedName,
+                    block
+                  );
+                  assert.isTrue(
+                    dupeTitleCheck,
+                    `All challenges within a block must have a unique dashed name. ${dashedName} (at ${pathAndTitle}) is already assigned`
+                  );
+                });
 
-          let { tests = [] } = challenge;
-          tests = tests.filter(test => !!test.testString);
-          if (tests.length === 0) {
-            it('Check tests. No tests.');
-            return;
-          }
+                const { challengeType } = challenge;
 
-          describe('Check tests syntax', function () {
-            tests.forEach(test => {
-              it(`Check for: ${test.text}`, function () {
-                assert.doesNotThrow(() => new vm.Script(test.testString));
-              });
-            });
-          });
+                if (hasNoSolution(challengeType)) return;
 
-          if (challengeType === challengeTypes.backend) {
-            it('Check tests is not implemented.');
-            return;
-          }
-
-          // TODO(after python PR): simplify pipeline and sync with client.
-          // buildChallengeData should be called and any errors handled.
-          // canBuildChallenge does not need to exist independently.
-          const buildChallenge =
-            {
-              [challengeTypes.js]: buildJSChallenge,
-              [challengeTypes.jsProject]: buildJSChallenge,
-              [challengeTypes.python]: buildPythonChallenge
-            }[challengeType] ?? buildDOMChallenge;
-
-          // The python tests are (currently) slow, so we give them more time.
-          const timePerTest =
-            challengeType === challengeTypes.python ? 10000 : 5000;
-          it('Test suite must fail on the initial contents', async function () {
-            this.timeout(timePerTest * tests.length + 1000);
-            // suppress errors in the console.
-            const oldConsoleError = console.error;
-            console.error = () => {};
-            let fails = false;
-            let testRunner;
-            try {
-              testRunner = await createTestRunner(
-                challenge,
-                [],
-                buildChallenge
-              );
-            } catch {
-              fails = true;
-            }
-            if (!fails) {
-              for (const test of tests) {
-                try {
-                  await testRunner(test);
-                } catch (e) {
-                  fails = true;
-                  break;
+                let { tests = [] } = challenge;
+                tests = tests.filter(test => !!test.testString);
+                if (tests.length === 0) {
+                  it('Check tests. No tests.');
+                  return;
                 }
-              }
-            }
-            console.error = oldConsoleError;
-            assert(fails, 'Test suit does not fail on the initial contents');
-          });
 
-          let { solutions = [] } = challenge;
+                describe('Check tests syntax', function () {
+                  tests.forEach(test => {
+                    it(`Check for: ${test.text}`, function () {
+                      assert.doesNotThrow(() => new vm.Script(test.testString));
+                    });
+                  });
+                });
 
-          // if there's an empty string as solution, this is likely a mistake
-          // TODO: what does this look like now? (this being detection of empty
-          // lines in solutions - rather than entirely missing solutions)
-
-          // We need to track where the solution came from to give better
-          // feedback if the solution is failing.
-          let solutionFromNext = false;
-
-          if (isEmpty(solutions)) {
-            // if there are no solutions in the challenge, it's assumed the next
-            // challenge's seed will be a solution to the current challenge.
-            // This is expected to happen in the project based curriculum.
-
-            const nextChallenge = challenges[id + 1];
-
-            if (nextChallenge) {
-              const solutionFiles = cloneDeep(nextChallenge.challengeFiles);
-              const solutionFilesWithEditableContents = solutionFiles.map(
-                file => ({
-                  ...file,
-                  editableContents: getLines(
-                    file.contents,
-                    file.editableRegionBoundaries
-                  )
-                })
-              );
-              // Since there is only one seed, there can only be one solution,
-              // but the tests assume solutions is an array.
-              solutions = [solutionFilesWithEditableContents];
-              solutionFromNext = true;
-            } else {
-              throw Error(
-                `solution omitted for ${challenge.superBlock} ${challenge.block} ${challenge.title}`
-              );
-            }
-          }
-
-          // TODO: the no-solution filtering is a little convoluted:
-          const noSolution = new RegExp('// solution required');
-
-          const filteredSolutions = solutions.filter(solution => {
-            return !isEmpty(
-              solution.filter(
-                challengeFile => !noSolution.test(challengeFile.contents)
-              )
-            );
-          });
-
-          if (isEmpty(filteredSolutions)) {
-            it('Check tests. No solutions');
-            return;
-          }
-
-          describe('Check tests against solutions', function () {
-            solutions.forEach((solution, index) => {
-              it(`Solution ${
-                index + 1
-              } must pass the tests`, async function () {
-                this.timeout(timePerTest * tests.length + 2000);
-                const testRunner = await createTestRunner(
-                  challenge,
-                  solution,
-                  buildChallenge,
-                  solutionFromNext
-                );
-                for (const test of tests) {
-                  await testRunner(test);
+                if (challengeType === challengeTypes.backend) {
+                  it('Check tests is not implemented.');
+                  return;
                 }
+
+                // The python tests are (currently) slow, so we give them more time.
+                const timePerTest =
+                  challengeType === challengeTypes.python ? 10000 : 5000;
+                it('Test suite must fail on the initial contents', async function () {
+                  // TODO: some tests take a surprisingly long time to setup the
+                  // test runner, so this timeout is large while we investigate.
+                  this.timeout(timePerTest * tests.length + 20000);
+                  // suppress errors in the console.
+                  const oldConsoleError = console.error;
+                  console.error = () => {};
+                  let fails = false;
+                  let testRunner;
+                  try {
+                    testRunner = await createTestRunner(
+                      challenge,
+                      challenge.challengeFiles,
+                      buildChallenge
+                    );
+                  } catch {
+                    fails = true;
+                  }
+                  if (!fails) {
+                    for (const test of tests) {
+                      try {
+                        await testRunner(test);
+                      } catch (e) {
+                        fails = true;
+                        break;
+                      }
+                    }
+                  }
+                  console.error = oldConsoleError;
+                  assert(
+                    fails,
+                    'Test suite does not fail on the initial contents'
+                  );
+                });
+
+                let { solutions = [] } = challenge;
+
+                // if there's an empty string as solution, this is likely a mistake
+                // TODO: what does this look like now? (this being detection of empty
+                // lines in solutions - rather than entirely missing solutions)
+
+                // We need to track where the solution came from to give better
+                // feedback if the solution is failing.
+                let solutionFromNext = false;
+
+                if (isEmpty(solutions)) {
+                  // if there are no solutions in the challenge, it's assumed the next
+                  // challenge's seed will be a solution to the current challenge.
+                  // This is expected to happen in the project based curriculum.
+
+                  const nextChallenge = superBlockChallenges[id + 1];
+
+                  if (nextChallenge) {
+                    const solutionFiles = cloneDeep(
+                      nextChallenge.challengeFiles
+                    );
+                    if (!solutionFiles) {
+                      throw Error(
+                        `No solution found.
+Check the next challenge (${nextChallenge.title}): it should have a seed which solves the current challenge.
+For example:
+
+# --seed--
+
+## --seed-contents--
+
+\`\`\`js
+seed goes here
+\`\`\`
+                  `
+                      );
+                    }
+                    const solutionFilesWithEditableContents = solutionFiles.map(
+                      file => ({
+                        ...file,
+                        editableContents: getLines(
+                          file.contents,
+                          file.editableRegionBoundaries
+                        )
+                      })
+                    );
+                    // Since there is only one seed, there can only be one solution,
+                    // but the tests assume solutions is an array.
+                    solutions = [solutionFilesWithEditableContents];
+                    solutionFromNext = true;
+                  } else {
+                    throw Error(
+                      `solution omitted for ${challenge.superBlock} ${challenge.block} ${challenge.title}`
+                    );
+                  }
+                }
+
+                // TODO: the no-solution filtering is a little convoluted:
+                const noSolution = new RegExp('// solution required');
+
+                const filteredSolutions = solutions.filter(solution => {
+                  return !isEmpty(
+                    solution.filter(
+                      challengeFile => !noSolution.test(challengeFile.contents)
+                    )
+                  );
+                });
+
+                if (isEmpty(filteredSolutions)) {
+                  it('Check tests. No solutions');
+                  return;
+                }
+
+                describe('Check tests against solutions', function () {
+                  solutions.forEach((solution, index) => {
+                    it(`Solution ${
+                      index + 1
+                    } must pass the tests`, async function () {
+                      this.timeout(timePerTest * tests.length + 2000);
+                      const testRunner = await createTestRunner(
+                        challenge,
+                        solution,
+                        buildChallenge,
+                        solutionFromNext
+                      );
+                      for (const test of tests) {
+                        await testRunner(test);
+                      }
+                    });
+                  });
+                });
               });
             });
           });
@@ -489,35 +552,33 @@ async function createTestRunner(
   buildChallenge,
   solutionFromNext
 ) {
-  const { required = [], template, removeComments } = challenge;
-
   const challengeFiles = replaceChallengeFilesContentsWithSolutions(
     challenge.challengeFiles,
     solutionFiles
   );
 
-  const { build, sources, loadEnzyme, transformedPython } =
-    await buildChallenge(
-      {
-        challengeFiles,
-        required,
-        template
-      },
-      { usesTestRunner: true }
-    );
+  const { build, sources, loadEnzyme } = await buildChallenge(
+    {
+      ...challenge,
+      challengeFiles
+    },
+    { usesTestRunner: true }
+  );
 
   const code = {
     contents: sources.index,
-    editableContents: sources.editableContents
+    editableContents: sources.editableContents,
+    original: sources.original
   };
 
-  const runsInBrowser =
-    buildChallenge === buildDOMChallenge ||
-    buildChallenge === buildPythonChallenge;
+  const buildFunction = buildFunctions[challenge.challengeType];
+
+  const runsInBrowser = buildFunction === buildDOMChallenge;
+  const runsInPythonWorker = buildFunction === buildPythonChallenge;
 
   const evaluator = await (runsInBrowser
-    ? getContextEvaluator(build, sources, code, loadEnzyme, transformedPython)
-    : getWorkerEvaluator(build, sources, code, removeComments));
+    ? getContextEvaluator(build, sources, code, loadEnzyme)
+    : getWorkerEvaluator(build, sources, code, runsInPythonWorker));
 
   return async ({ text, testString }) => {
     try {
@@ -551,7 +612,9 @@ function replaceChallengeFilesContentsWithSolutions(
       ({ ext, name }) => ext === file.ext && file.name === name
     );
     if (!matchingSolutionFile) {
-      throw Error(`No matching solution file found`);
+      throw Error(
+        `No matching solution file found for ${file.name}.${file.ext} - this likely means the seed code for the next step is missing the ${file.ext} code block.`
+      );
     }
     return {
       ...file,
@@ -561,20 +624,8 @@ function replaceChallengeFilesContentsWithSolutions(
   });
 }
 
-async function getContextEvaluator(
-  build,
-  sources,
-  code,
-  loadEnzyme,
-  transformedPython
-) {
-  await initializeTestRunner(
-    build,
-    sources,
-    code,
-    loadEnzyme,
-    transformedPython
-  );
+async function getContextEvaluator(build, sources, code, loadEnzyme) {
+  await initializeTestRunner(build, sources, code, loadEnzyme);
 
   return {
     evaluate: async (testString, timeout) =>
@@ -589,41 +640,36 @@ async function getContextEvaluator(
   };
 }
 
-async function getWorkerEvaluator(build, sources, code, removeComments) {
-  const testWorker = createWorker(testEvaluator, { terminateWorker: true });
+async function getWorkerEvaluator(build, sources, code, runsInPythonWorker) {
+  // The python worker clears the globals between tests, so it should be fine
+  // to use the same evaluator for all tests. TODO: check if this is true for
+  // sys, since sys.modules is not being reset.
+  const testWorker = runsInPythonWorker
+    ? pythonWorker
+    : new WorkerExecutor(javaScriptTestEvaluator, { terminateWorker: true });
   return {
     evaluate: async (testString, timeout) =>
-      await testWorker.execute(
-        { testString, build, code, sources, removeComments },
-        timeout
-      ).done
+      await testWorker.execute({ testString, build, code, sources }, timeout)
+        .done
   };
 }
 
-async function initializeTestRunner(
-  build,
-  sources,
-  code,
-  loadEnzyme,
-  transformedPython
-) {
+async function initializeTestRunner(build, sources, code, loadEnzyme) {
   await page.reload();
-  await page.setContent(build);
+  await page.setContent(createHeader(testId) + build);
   await page.evaluate(
-    async (code, sources, loadEnzyme, transformedPython) => {
+    async (code, sources, loadEnzyme) => {
       const getUserInput = fileName => sources[fileName];
       // TODO: use frame's functions directly, so it behaves more like the
-      // client. Also, keep an eye on performance - loading pyodide is slow.
+      // client.
       await document.__initTestFrame({
         code: sources,
         getUserInput,
-        loadEnzyme,
-        transformedPython
+        loadEnzyme
       });
     },
     code,
     sources,
-    loadEnzyme,
-    transformedPython
+    loadEnzyme
   );
 }

@@ -13,8 +13,10 @@ export const createFiles = createAction(
         challengeFile.contents,
         challengeFile.editableRegionBoundaries
       ),
+      editableRegionBoundaries:
+        challengeFile.editableRegionBoundaries?.slice() ?? [],
       seedEditableRegionBoundaries:
-        challengeFile.editableRegionBoundaries?.slice()
+        challengeFile.editableRegionBoundaries?.slice() ?? []
     }))
 );
 
@@ -24,6 +26,7 @@ export const updateTests = createAction(actionTypes.updateTests);
 export const cancelTests = createAction(actionTypes.cancelTests);
 export const initConsole = createAction(actionTypes.initConsole);
 export const initLogs = createAction(actionTypes.initLogs);
+export const initVisibleEditors = createAction(actionTypes.initVisibleEditors);
 export const updateChallengeMeta = createAction(
   actionTypes.updateChallengeMeta
 );
@@ -70,6 +73,9 @@ export const challengeMounted = createAction(actionTypes.challengeMounted);
 export const sendRenderTime = createAction(actionTypes.sendRenderTime);
 export const checkChallenge = createAction(actionTypes.checkChallenge);
 export const executeChallenge = createAction(actionTypes.executeChallenge);
+export const executeChallengeComplete = createAction(
+  actionTypes.executeChallengeComplete
+);
 export const resetChallenge = createAction(actionTypes.resetChallenge);
 export const stopResetting = createAction(actionTypes.stopResetting);
 export const submitChallenge = createAction(actionTypes.submitChallenge);
